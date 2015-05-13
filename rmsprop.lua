@@ -10,6 +10,7 @@ ARGS:
 - 'config.alpha'             : smoothing constant
 - 'config.epsilon'           : value with which to inistialise m
 - 'config.momentum'          : value of Nesterov momentum to use
+- 'config.weightDecay'       : weight decay
 - 'state'                    : a table describing the state of the optimizer;
                                after each call the state is modified
 - 'state.m'                  : leaky sum of squares of parameter gradients,
@@ -30,6 +31,7 @@ function optim.rmsprop(opfunc, x, config, state)
     local alpha = config.alpha or 0.99
     local epsilon = config.epsilon or 1e-8
     local momentum = config.momentum or 0
+    local wd = config.weightDecay or 0
     
     -- (0) make Nesterov momentum update (BEFORE evaluation)
     if momentum then
@@ -43,11 +45,16 @@ function optim.rmsprop(opfunc, x, config, state)
     -- (1) evaluate f(x) and df/dx
     local fx, dfdx = opfunc(x)
     
+    if wd then
+      dfdx:add(wd, x)
+    end
+    
     if momentum then
       -- undo Nesterov step
       x:add(-momentum, state.v)
     end
-      
+    
+    
     -- (2) initialize mean square values and square gradient storage
     if not state.m then
       state.m = torch.Tensor():typeAs(x):resizeAs(dfdx):zero()
